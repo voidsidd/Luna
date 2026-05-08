@@ -2,10 +2,25 @@ import type { ParsedTaskDraft } from "@/lib/types";
 
 const groqUrl = "https://api.groq.com/openai/v1/chat/completions";
 
-export async function parseBrainDumpWithGroq(input: string): Promise<ParsedTaskDraft[]> {
+type CurrentTimeContext = {
+  iso?: string;
+  local?: string;
+  timezone?: string;
+  locale?: string;
+};
+
+export async function parseBrainDumpWithGroq(input: string, currentTime?: CurrentTimeContext): Promise<ParsedTaskDraft[]> {
   if (!process.env.GROQ_API_KEY) {
     throw new Error("GROQ_API_KEY is not configured.");
   }
+
+  const serverNow = new Date();
+  const timeContext = {
+    iso: currentTime?.iso ?? serverNow.toISOString(),
+    local: currentTime?.local ?? serverNow.toString(),
+    timezone: currentTime?.timezone ?? "unknown",
+    locale: currentTime?.locale ?? "unknown"
+  };
 
   const response = await fetch(groqUrl, {
     method: "POST",
@@ -21,11 +36,20 @@ export async function parseBrainDumpWithGroq(input: string): Promise<ParsedTaskD
         {
           role: "system",
           content:
-            "Extract tasks from a messy brain dump. Return JSON only with {\"tasks\": [...]}. Keep the user in control. Do not add motivational prose. Use ISO strings for deadlines when clear. Infer conservatively."
+            "Extract tasks from a messy brain dump. Return JSON only with {\"tasks\": [...]}. Keep the user in control. Do not add motivational prose. Use ISO 8601 strings for deadlines when clear. Interpret relative deadlines such as today, tomorrow, tonight, next Friday, and in 2 hours using the supplied current time and timezone. Infer conservatively; if a deadline is unclear, omit it rather than inventing one."
         },
         {
           role: "user",
-          content: `Today is ${new Date().toISOString()}. Brain dump:\n${input}\n\nEach task must include title, category, impact, effortMinutes, energyRequired, optional deadline, optional nextAction. Categories: competition, school, chore, personal, admin. Energy: low, medium, high. Impact: 1-5.`
+          content: `Current time context:
+ISO: ${timeContext.iso}
+Local: ${timeContext.local}
+Timezone: ${timeContext.timezone}
+Locale: ${timeContext.locale}
+
+Brain dump:
+${input}
+
+Each task must include title, category, impact, effortMinutes, energyRequired, optional deadline, optional nextAction. Categories: competition, school, chore, personal, admin. Energy: low, medium, high. Impact: 1-5. Prefer short concrete titles and next actions under 25 minutes.`
         }
       ]
     })

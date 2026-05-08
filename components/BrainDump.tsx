@@ -16,21 +16,24 @@ export function BrainDump({ onAccept }: { onAccept: (task: Task) => void | Promi
   const [isParsing, setIsParsing] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
-  function parseManually() {
-    const parsed = parseBrainDump(input).map(withLocalId);
-    setDrafts(parsed);
-    setMessage(parsed.length === 0 ? "I could not find a clear task. Try one task per line." : null);
-  }
-
-  async function parseWithAi() {
+  async function organize() {
     if (!input.trim()) return;
     setIsParsing(true);
     setMessage(null);
+    const now = new Date();
     try {
       const response = await fetch("/api/parse-brain-dump", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ input, mode: "ai" })
+        body: JSON.stringify({
+          input,
+          currentTime: {
+            iso: now.toISOString(),
+            local: now.toString(),
+            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+            locale: navigator.language
+          }
+        })
       });
       const payload = (await response.json()) as { tasks?: ParsedTaskDraft[]; source?: string; warning?: string };
       const parsed = (payload.tasks?.length ? payload.tasks : parseBrainDump(input)).map(withLocalId);
@@ -80,15 +83,10 @@ export function BrainDump({ onAccept }: { onAccept: (task: Task) => void | Promi
           onChange={(event) => setInput(event.target.value)}
         />
 
-        <div className="grid gap-2 sm:grid-cols-2">
-          <button className="btn btn-soft w-full disabled:opacity-45" disabled={!input.trim() || isParsing} onClick={parseManually}>
-            Parse
-          </button>
-          <button className="btn btn-primary w-full disabled:opacity-45" disabled={!input.trim() || isParsing} onClick={parseWithAi}>
-            <Wand2 size={16} />
-            {isParsing ? "Parsing..." : "Parse with AI"}
-          </button>
-        </div>
+        <button className="btn btn-primary w-full disabled:opacity-45" disabled={!input.trim() || isParsing} onClick={organize}>
+          <Wand2 size={16} />
+          {isParsing ? "Organizing..." : "Organize"}
+        </button>
 
         {message ? <p className="text-sm text-[var(--muted)]">{message}</p> : null}
 
