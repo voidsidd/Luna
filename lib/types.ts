@@ -14,6 +14,11 @@ export type Task = {
   category: TaskCategory;
   status: TaskStatus;
   impact: 1 | 2 | 3 | 4 | 5;
+  eventImportance?: 1 | 2 | 3 | 4 | 5;
+  sunkCostMinutes?: number;
+  opportunityName?: string;
+  submissionUrl?: string;
+  requirements?: string;
   effortMinutes?: number;
   energyRequired: EnergyLevel;
   context?: TaskContext;
@@ -25,6 +30,11 @@ export type Task = {
 
 export type ParsedTaskDraft = Omit<Task, "id" | "status" | "createdAt" | "updatedAt"> & {
   sourceText?: string;
+};
+
+export type BrainDumpParseResult = {
+  tasks: ParsedTaskDraft[];
+  clarifyingQuestions: string[];
 };
 
 export type TaskEvent = {

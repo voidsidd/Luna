@@ -13,6 +13,7 @@ type EditableDraft = ParsedTaskDraft & {
 export function BrainDump({ onAccept }: { onAccept: (task: Task) => void | Promise<void> }) {
   const [input, setInput] = useState("");
   const [drafts, setDrafts] = useState<EditableDraft[]>([]);
+  const [clarifyingQuestions, setClarifyingQuestions] = useState<string[]>([]);
   const [isParsing, setIsParsing] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
@@ -35,12 +36,14 @@ export function BrainDump({ onAccept }: { onAccept: (task: Task) => void | Promi
           }
         })
       });
-      const payload = (await response.json()) as { tasks?: ParsedTaskDraft[]; source?: string; warning?: string };
+      const payload = (await response.json()) as { tasks?: ParsedTaskDraft[]; clarifyingQuestions?: string[]; source?: string; warning?: string };
       const parsed = (payload.tasks?.length ? payload.tasks : parseBrainDump(input)).map(withLocalId);
       setDrafts(parsed);
+      setClarifyingQuestions(payload.clarifyingQuestions ?? []);
       setMessage(payload.warning ?? null);
     } catch {
       setDrafts(parseBrainDump(input).map(withLocalId));
+      setClarifyingQuestions([]);
       setMessage("AI parsing was unavailable, so I used the conservative parser.");
     } finally {
       setIsParsing(false);
@@ -62,6 +65,7 @@ export function BrainDump({ onAccept }: { onAccept: (task: Task) => void | Promi
     }
     setInput("");
     setDrafts([]);
+    setClarifyingQuestions([]);
     setMessage(null);
   }
 
@@ -89,6 +93,17 @@ export function BrainDump({ onAccept }: { onAccept: (task: Task) => void | Promi
         </button>
 
         {message ? <p className="text-sm text-[var(--muted)]">{message}</p> : null}
+
+        {clarifyingQuestions.length > 0 ? (
+          <div className="rounded-[18px] border border-blue-100 bg-blue-50/80 p-3 text-sm text-slate-700">
+            <p className="font-semibold text-[var(--foreground)]">Quick clarifications</p>
+            <ul className="mt-2 list-disc space-y-1 pl-5">
+              {clarifyingQuestions.map((question) => (
+                <li key={question}>{question}</li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
 
         {drafts.length > 0 ? (
           <div className="space-y-2">
@@ -132,6 +147,22 @@ function DraftReview({
         </select>
       </div>
       {!draft.deadline ? <p className="text-xs text-[var(--warning)]">No deadline found. Add one if this can become urgent.</p> : null}
+      {draft.category === "competition" ? (
+        <div className="space-y-2">
+          <div className="grid gap-2 sm:grid-cols-[1fr_120px]">
+            <input className="field" placeholder="Opportunity name" value={draft.opportunityName ?? ""} onChange={(event) => onChange({ opportunityName: event.target.value || undefined })} />
+            <select className="field" value={draft.eventImportance ?? draft.impact} onChange={(event) => onChange({ eventImportance: Number(event.target.value) as 1 | 2 | 3 | 4 | 5 })}>
+              <option value={1}>Importance 1</option>
+              <option value={2}>Importance 2</option>
+              <option value={3}>Importance 3</option>
+              <option value={4}>Importance 4</option>
+              <option value={5}>Importance 5</option>
+            </select>
+          </div>
+          <input className="field" placeholder="Submission URL" value={draft.submissionUrl ?? ""} onChange={(event) => onChange({ submissionUrl: event.target.value || undefined })} />
+          <input className="field" placeholder="Requirements" value={draft.requirements ?? ""} onChange={(event) => onChange({ requirements: event.target.value || undefined })} />
+        </div>
+      ) : null}
       <div className="flex gap-2">
         <button className="btn btn-success flex-1" onClick={onAccept}>
           <Check size={16} />

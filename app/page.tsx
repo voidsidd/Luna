@@ -10,6 +10,7 @@ import { TaskEditor } from "@/components/TaskEditor";
 import { TaskList } from "@/components/TaskList";
 import { loadTasks, saveTask, updateTask } from "@/lib/storage/taskStore";
 import { loadTaskEvents, recordTaskEvent } from "@/lib/storage/taskEventStore";
+import { loadReminders, saveReminder } from "@/lib/storage/reminderStore";
 import { explainTask, scoreTask } from "@/lib/priority/scoreTask";
 import { recommendNextTask } from "@/lib/priority/recommendNextTask";
 import { summarizePatterns } from "@/lib/priority/userPatterns";
@@ -23,6 +24,7 @@ export default function Home() {
   const [events, setEvents] = useState<TaskEvent[]>([]);
   const [tab, setTab] = useState<Tab>("Now");
   const [isLoaded, setIsLoaded] = useState(false);
+  const [isOverwhelmedMode, setIsOverwhelmedMode] = useState(false);
 
   const refreshData = useCallback(() => {
     Promise.all([loadTasks(), loadTaskEvents()]).then(([taskItems, eventItems]) => {
@@ -46,9 +48,28 @@ export default function Home() {
 
   async function upsertTask(task: Task) {
     const saved = await saveTask(task);
+    await ensureDeadlineReminder(saved);
     setTasks((current) => {
       const exists = current.some((item) => item.id === saved.id);
       return exists ? current.map((item) => (item.id === saved.id ? saved : item)) : [saved, ...current];
+    });
+  }
+
+  async function ensureDeadlineReminder(task: Task) {
+    if (!task.deadline || task.status === "done") return;
+    const reminders = await loadReminders();
+    const hasDeadlineReminder = reminders.some((reminder) => reminder.taskId === task.id && reminder.reminderType === "deadline" && reminder.status === "scheduled");
+    if (hasDeadlineReminder) return;
+
+    const remindAt = defaultReminderTime(task.deadline);
+    await saveReminder({
+      id: crypto.randomUUID(),
+      taskId: task.id,
+      userId: task.userId,
+      remindAt,
+      reminderType: "deadline",
+      status: "scheduled",
+      createdAt: new Date().toISOString()
     });
   }
 
@@ -134,6 +155,8 @@ export default function Home() {
               onDone={(task) => setStatus(task, "done")}
               onSnooze={snoozeTask}
               onFeedback={markNeedsSmallerStep}
+              isOverwhelmedMode={isOverwhelmedMode}
+              onToggleOverwhelmed={() => setIsOverwhelmedMode((value) => !value)}
             />
           ) : tab === "Tasks" ? (
             <TaskList tasks={tasks.filter((task) => task.status !== "done")} onDone={(task) => setStatus(task, "done")} onSnooze={snoozeTask} onSave={upsertTask} onFeedback={markNeedsSmallerStep} />
@@ -157,13 +180,17 @@ function NowView({
   rankedTasks,
   onDone,
   onSnooze,
-  onFeedback
+  onFeedback,
+  isOverwhelmedMode,
+  onToggleOverwhelmed
 }: {
   recommendation: ReturnType<typeof recommendNextTask>;
   rankedTasks: Array<{ task: Task; score: number; reason: string }>;
   onDone: (task: Task) => void;
   onSnooze: (task: Task) => void;
   onFeedback: (task: Task, eventType: "too_tired" | "too_hard" | "not_now") => void;
+  isOverwhelmedMode: boolean;
+  onToggleOverwhelmed: () => void;
 }) {
   if (!recommendation) {
     return (
@@ -183,6 +210,11 @@ function NowView({
     <div className="space-y-5">
       <Panel title="Recommended Now" icon={<Sparkles size={18} />}>
         <div className="rounded-[18px] border border-[var(--line)] bg-white/72 p-5 shadow-sm">
+          <div className="mb-4 flex justify-end">
+            <button className={`btn ${isOverwhelmedMode ? "btn-primary" : "btn-soft"}`} onClick={onToggleOverwhelmed}>
+              {isOverwhelmedMode ? "Overwhelmed mode on" : "Overwhelmed mode"}
+            </button>
+          </div>
           <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
             <div>
               <p className="text-sm font-semibold text-[var(--accent)]">Do this next</p>
@@ -213,9 +245,9 @@ function NowView({
         </div>
       </Panel>
 
-      <Panel title="Backups" icon={<ListChecks size={18} />}>
+      <Panel title={isOverwhelmedMode ? "One Backup" : "Backups"} icon={<ListChecks size={18} />}>
         <div className="grid gap-3">
-          {rankedTasks.slice(1, 3).map(({ task, score, reason }) => (
+          {rankedTasks.slice(1, isOverwhelmedMode ? 2 : 3).map(({ task, score, reason }) => (
             <div key={task.id} className="subtle-card p-4">
               <div className="flex items-start justify-between gap-4">
                 <div>
@@ -343,4 +375,17 @@ function toPromptDate(date: Date) {
   const hour = String(date.getHours()).padStart(2, "0");
   const minute = String(date.getMinutes()).padStart(2, "0");
   return `${year}-${month}-${day} ${hour}:${minute}`;
+}
+
+function defaultReminderTime(deadline: string) {
+  const due = new Date(deadline);
+  const reminder = new Date(due);
+  reminder.setDate(reminder.getDate() - 1);
+  reminder.setHours(9, 0, 0, 0);
+  if (reminder <= new Date()) {
+    const soon = new Date();
+    soon.setMinutes(soon.getMinutes() + 30);
+    return soon.toISOString();
+  }
+  return reminder.toISOString();
 }

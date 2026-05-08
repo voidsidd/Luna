@@ -3,12 +3,15 @@ import type { Task, UserPatternSummary } from "@/lib/types";
 
 export function scoreTask(task: Task, patterns?: UserPatternSummary) {
   const deadline = deadlinePressure(task.deadline);
-  const impact = task.impact * 12;
+  const importance = (task.eventImportance ?? task.impact) * 12;
+  const impact = task.impact * 7;
   const effort = effortFit(task.effortMinutes);
   const energy = energyFit(task.energyRequired);
+  const opportunity = opportunityBoost(task);
+  const sunkCost = sunkCostPenalty(task);
   const snoozePenalty = task.status === "snoozed" && task.snoozedUntil && new Date(task.snoozedUntil) > new Date() ? -35 : 0;
   const learnedAdjustment = patterns ? patternAdjustment(task, patterns) : 0;
-  return clamp(Math.round(deadline + impact + effort + energy + snoozePenalty + learnedAdjustment), 0, 100);
+  return clamp(Math.round(deadline + importance + impact + opportunity + effort + energy + sunkCost + snoozePenalty + learnedAdjustment), 0, 100);
 }
 
 export function explainTask(task: Task) {
@@ -20,7 +23,8 @@ export function explainTask(task: Task) {
     else if (days === 1) parts.push("due tomorrow");
     else if (days <= 7) parts.push(`due in ${days} days`);
   }
-  if (task.impact >= 4) parts.push("high impact");
+  if ((task.eventImportance ?? task.impact) >= 4) parts.push("important");
+  if (task.sunkCostMinutes && task.sunkCostMinutes > 120 && (task.eventImportance ?? task.impact) <= 2) parts.push("but sunk cost is not treated as priority");
   if (task.effortMinutes && task.effortMinutes <= 25) parts.push("small enough to start quickly");
   if (task.energyRequired === "low") parts.push("low energy");
   if (parts.length === 0) return "Recommended because it is active and currently unblocked.";
@@ -52,6 +56,18 @@ function energyFit(energy: Task["energyRequired"]) {
   if (energy === "low") return hour >= 21 || hour < 9 ? 14 : 10;
   if (energy === "medium") return 8;
   return hour >= 9 && hour <= 20 ? 7 : 1;
+}
+
+function opportunityBoost(task: Task) {
+  if (task.category !== "competition") return 0;
+  const importance = task.eventImportance ?? task.impact;
+  return importance >= 4 ? 10 : 4;
+}
+
+function sunkCostPenalty(task: Task) {
+  if (!task.sunkCostMinutes || task.sunkCostMinutes < 120) return 0;
+  const importance = task.eventImportance ?? task.impact;
+  return importance <= 2 ? -10 : 0;
 }
 
 function daysUntil(deadline: string) {

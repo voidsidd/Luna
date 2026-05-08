@@ -35,6 +35,7 @@ function parseLine(line: string): ParsedTaskDraft {
     deadline: parsedDate?.toISOString(),
     category,
     impact: category === "competition" || category === "school" ? 4 : 3,
+    eventImportance: category === "competition" ? 4 : undefined,
     effortMinutes,
     energyRequired,
     nextAction: inferNextAction(title, category),

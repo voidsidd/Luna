@@ -17,10 +17,10 @@ export async function POST(request: Request) {
   if (!input) return NextResponse.json({ tasks: [] });
 
   try {
-    const tasks = await parseBrainDumpWithGroq(input, body.currentTime);
-    return NextResponse.json({ tasks, source: "groq" });
+    const result = await parseBrainDumpWithGroq(input, body.currentTime);
+    return NextResponse.json({ ...result, source: "groq" });
   } catch (error) {
     console.warn("Groq parse failed; falling back to manual parser.", error);
-    return NextResponse.json({ tasks: parseBrainDump(input), source: "manual-fallback", warning: "AI unavailable; used a conservative fallback." });
+    return NextResponse.json({ tasks: parseBrainDump(input), clarifyingQuestions: [], source: "manual-fallback", warning: "AI unavailable; used a conservative fallback." });
   }
 }

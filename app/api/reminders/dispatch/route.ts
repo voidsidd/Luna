@@ -127,6 +127,11 @@ function taskFromRow(row: Record<string, unknown>): Task {
     category: String(row.category ?? "personal") as Task["category"],
     status: String(row.status ?? "active") as Task["status"],
     impact: Number(row.impact ?? 3) as Task["impact"],
+    eventImportance: nullableImpact(row.event_importance),
+    sunkCostMinutes: nullableNumber(row.sunk_cost_minutes),
+    opportunityName: nullableString(row.opportunity_name),
+    submissionUrl: nullableString(row.submission_url),
+    requirements: nullableString(row.requirements),
     effortMinutes: nullableNumber(row.effort_minutes),
     energyRequired: String(row.energy_required ?? "medium") as Task["energyRequired"],
     context: nullableString(row.context) as Task["context"],
@@ -155,4 +160,8 @@ function nullableString(value: unknown) {
 
 function nullableNumber(value: unknown) {
   return typeof value === "number" ? value : undefined;
+}
+
+function nullableImpact(value: unknown) {
+  return typeof value === "number" && value >= 1 && value <= 5 ? (value as 1 | 2 | 3 | 4 | 5) : undefined;
 }
