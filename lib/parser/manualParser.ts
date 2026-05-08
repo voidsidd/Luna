@@ -18,13 +18,14 @@ export function parseBrainDump(input: string): ParsedTaskDraft[] {
 
 function splitInput(input: string) {
   return input
-    .split(/\n|;|(?:,\s+(?=(?:and\s+)?(?:need|finish|submit|apply|do|clean|wash|email|call|register|study|work)\b))/i)
-    .flatMap((part) => part.split(/\s+\band\b\s+(?=(?:need|finish|submit|apply|do|clean|wash|email|call|register|study|work)\b)/i));
+    .split(/\n|;|(?:,\s+(?=(?:need to|need|finish|submit|apply|do|clean|wash|email|call|register|study|work|buy|pay|send|make|prepare)\b))/i)
+    .map((part) => part.replace(/^[-*•\d.)\s]+/, ""));
 }
 
 function parseLine(line: string): ParsedTaskDraft {
-  const parsedDate = chrono.parseDate(line, new Date(), { forwardDate: true });
-  const title = cleanTitle(line);
+  const parsedResults = chrono.parse(line, new Date(), { forwardDate: true });
+  const parsedDate = parsedResults[0]?.date();
+  const title = cleanTitle(line, parsedResults[0]?.text);
   const category = inferCategory(line);
   const effortMinutes = inferEffort(line, category);
   const energyRequired = inferEnergy(line, category);
@@ -41,12 +42,16 @@ function parseLine(line: string): ParsedTaskDraft {
   };
 }
 
-function cleanTitle(line: string) {
-  return line
+function cleanTitle(line: string, dateText?: string) {
+  const withoutDate = dateText ? line.replace(dateText, "") : line;
+
+  return withoutDate
     .replace(/\b(i\s+)?(need to|have to|gotta|should|must)\b/gi, "")
-    .replace(/\b(by|due|before|on)\s+(today|tomorrow|monday|tuesday|wednesday|thursday|friday|saturday|sunday|next week|this week)\b/gi, "")
+    .replace(/\b(by|due|before|on|at)\b/gi, "")
+    .replace(/\b(today|tomorrow|tonight|next week|this week)\b/gi, "")
     .replace(/\s+/g, " ")
     .replace(/^[-*.\s]+/, "")
+    .replace(/[,.]+$/, "")
     .trim()
     .replace(/^[a-z]/, (letter) => letter.toUpperCase());
 }

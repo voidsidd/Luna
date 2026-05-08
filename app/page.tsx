@@ -59,7 +59,9 @@ export default function Home() {
   }
 
   async function snoozeTask(task: Task) {
-    const saved = await updateTask({ ...task, status: "snoozed", snoozedUntil: nextMorning(), updatedAt: new Date().toISOString() });
+    const snoozedUntil = askForSnoozeTime();
+    if (!snoozedUntil) return;
+    const saved = await updateTask({ ...task, status: "snoozed", snoozedUntil, updatedAt: new Date().toISOString() });
     setTasks((current) => current.map((item) => (item.id === saved.id ? saved : item)));
     await logEvent(saved, "snoozed", { snoozedUntil: saved.snoozedUntil });
   }
@@ -79,7 +81,13 @@ export default function Home() {
         updatedAt: new Date().toISOString()
       });
       setTasks((current) => current.map((item) => (item.id === saved.id ? saved : item)));
+      return;
     }
+
+    const minutes = eventType === "too_tired" ? 120 : 60;
+    const snoozedUntil = offsetMinutes(minutes);
+    const saved = await updateTask({ ...task, status: "snoozed", snoozedUntil, updatedAt: new Date().toISOString() });
+    setTasks((current) => current.map((item) => (item.id === saved.id ? saved : item)));
   }
 
   return (
@@ -128,7 +136,7 @@ export default function Home() {
               onFeedback={markNeedsSmallerStep}
             />
           ) : tab === "Tasks" ? (
-            <TaskList tasks={tasks} onDone={(task) => setStatus(task, "done")} onSnooze={snoozeTask} onSave={upsertTask} onFeedback={markNeedsSmallerStep} />
+            <TaskList tasks={tasks.filter((task) => task.status !== "done")} onDone={(task) => setStatus(task, "done")} onSnooze={snoozeTask} onSave={upsertTask} onFeedback={markNeedsSmallerStep} />
           ) : tab === "Deadlines" ? (
             <DeadlineView tasks={tasks} patterns={patterns} onDone={(task) => setStatus(task, "done")} onSnooze={snoozeTask} onFeedback={markNeedsSmallerStep} />
           ) : tab === "Reminders" ? (
@@ -207,7 +215,7 @@ function NowView({
 
       <Panel title="Backups" icon={<ListChecks size={18} />}>
         <div className="grid gap-3">
-          {rankedTasks.slice(1, 5).map(({ task, score, reason }) => (
+          {rankedTasks.slice(1, 3).map(({ task, score, reason }) => (
             <div key={task.id} className="subtle-card p-4">
               <div className="flex items-start justify-between gap-4">
                 <div>
@@ -309,4 +317,30 @@ function nextMorning() {
   date.setDate(date.getDate() + 1);
   date.setHours(9, 0, 0, 0);
   return date.toISOString();
+}
+
+function offsetMinutes(minutes: number) {
+  const date = new Date();
+  date.setMinutes(date.getMinutes() + minutes);
+  return date.toISOString();
+}
+
+function askForSnoozeTime() {
+  const fallback = nextMorning();
+  const fallbackDate = new Date(fallback);
+  const formatted = toPromptDate(fallbackDate);
+  const answer = window.prompt("Snooze until? Use YYYY-MM-DD HH:mm", formatted);
+  if (answer === null) return null;
+  const parsed = new Date(answer.replace(" ", "T"));
+  if (Number.isNaN(parsed.getTime())) return fallback;
+  return parsed.toISOString();
+}
+
+function toPromptDate(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  const hour = String(date.getHours()).padStart(2, "0");
+  const minute = String(date.getMinutes()).padStart(2, "0");
+  return `${year}-${month}-${day} ${hour}:${minute}`;
 }

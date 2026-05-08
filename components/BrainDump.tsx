@@ -1,27 +1,28 @@
 "use client";
 
-import { Inbox, Wand2 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { Check, Inbox, Trash2, Wand2 } from "lucide-react";
+import { useState } from "react";
 import { parseBrainDump } from "@/lib/parser/manualParser";
 import { createTask } from "@/lib/tasks/createTask";
-import type { ParsedTaskDraft, Task } from "@/lib/types";
+import type { ParsedTaskDraft, Task, TaskCategory } from "@/lib/types";
 
-export function BrainDump({ onAccept }: { onAccept: (task: Task) => void }) {
+type EditableDraft = ParsedTaskDraft & {
+  localId: string;
+};
+
+export function BrainDump({ onAccept }: { onAccept: (task: Task) => void | Promise<void> }) {
   const [input, setInput] = useState("");
-  const [aiDrafts, setAiDrafts] = useState<ParsedTaskDraft[] | null>(null);
+  const [drafts, setDrafts] = useState<EditableDraft[]>([]);
   const [isParsing, setIsParsing] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
-  const manualDrafts = useMemo(() => parseBrainDump(input), [input]);
-  const drafts = aiDrafts ?? manualDrafts;
 
-  function acceptAll() {
-    drafts.forEach((draft) => onAccept(createTask(draft)));
-    setInput("");
-    setAiDrafts(null);
-    setMessage(null);
+  function parseManually() {
+    const parsed = parseBrainDump(input).map(withLocalId);
+    setDrafts(parsed);
+    setMessage(parsed.length === 0 ? "I could not find a clear task. Try one task per line." : null);
   }
 
-  async function enhanceWithAi() {
+  async function parseWithAi() {
     if (!input.trim()) return;
     setIsParsing(true);
     setMessage(null);
@@ -32,14 +33,37 @@ export function BrainDump({ onAccept }: { onAccept: (task: Task) => void }) {
         body: JSON.stringify({ input, mode: "ai" })
       });
       const payload = (await response.json()) as { tasks?: ParsedTaskDraft[]; source?: string; warning?: string };
-      setAiDrafts(payload.tasks ?? []);
-      setMessage(payload.warning ?? `Parsed with ${payload.source ?? "manual"} parser.`);
+      const parsed = (payload.tasks?.length ? payload.tasks : parseBrainDump(input)).map(withLocalId);
+      setDrafts(parsed);
+      setMessage(payload.warning ?? null);
     } catch {
-      setAiDrafts(manualDrafts);
-      setMessage("AI parsing was unavailable, so the manual parser stayed in control.");
+      setDrafts(parseBrainDump(input).map(withLocalId));
+      setMessage("AI parsing was unavailable, so I used the conservative parser.");
     } finally {
       setIsParsing(false);
     }
+  }
+
+  async function acceptDraft(draft: EditableDraft) {
+    await onAccept(createTask(stripLocalId(draft)));
+    setDrafts((current) => current.filter((item) => item.localId !== draft.localId));
+  }
+
+  function rejectDraft(localId: string) {
+    setDrafts((current) => current.filter((item) => item.localId !== localId));
+  }
+
+  async function acceptAll() {
+    for (const draft of drafts) {
+      await onAccept(createTask(stripLocalId(draft)));
+    }
+    setInput("");
+    setDrafts([]);
+    setMessage(null);
+  }
+
+  function updateDraft(localId: string, patch: Partial<EditableDraft>) {
+    setDrafts((current) => current.map((draft) => (draft.localId === localId ? { ...draft, ...patch } : draft)));
   }
 
   return (
@@ -51,40 +75,86 @@ export function BrainDump({ onAccept }: { onAccept: (task: Task) => void }) {
       <div className="space-y-3 p-4">
         <textarea
           className="field min-h-32 resize-y"
-          placeholder="Paste the messy version: physics due tomorrow, laundry, register for hackathon by Sunday..."
+          placeholder="One messy dump is fine. For best results, put separate tasks on separate lines."
           value={input}
           onChange={(event) => setInput(event.target.value)}
         />
+
+        <div className="grid gap-2 sm:grid-cols-2">
+          <button className="btn btn-soft w-full disabled:opacity-45" disabled={!input.trim() || isParsing} onClick={parseManually}>
+            Parse
+          </button>
+          <button className="btn btn-primary w-full disabled:opacity-45" disabled={!input.trim() || isParsing} onClick={parseWithAi}>
+            <Wand2 size={16} />
+            {isParsing ? "Parsing..." : "Parse with AI"}
+          </button>
+        </div>
+
+        {message ? <p className="text-sm text-[var(--muted)]">{message}</p> : null}
+
         {drafts.length > 0 ? (
           <div className="space-y-2">
-            {drafts.map((draft, index) => (
-              <div key={`${draft.title}-${index}`} className="subtle-card p-3 text-sm">
-                <p className="font-semibold">{draft.title}</p>
-                <p className="mt-1 text-[var(--muted)]">
-                  {draft.category} - {draft.deadline ? new Date(draft.deadline).toLocaleDateString() : "no deadline"} - {draft.energyRequired} energy
-                </p>
-              </div>
+            {drafts.map((draft) => (
+              <DraftReview key={draft.localId} draft={draft} onChange={(patch) => updateDraft(draft.localId, patch)} onAccept={() => acceptDraft(draft)} onReject={() => rejectDraft(draft.localId)} />
             ))}
+            <button className="btn btn-dark w-full" onClick={acceptAll}>
+              Accept all remaining
+            </button>
           </div>
         ) : null}
-        {message ? <p className="text-sm text-[var(--muted)]">{message}</p> : null}
-        <button
-          className="btn btn-soft w-full disabled:opacity-45"
-          disabled={drafts.length === 0 || isParsing}
-          onClick={enhanceWithAi}
-        >
-          <Wand2 size={16} />
-          {isParsing ? "Parsing..." : "Clean up with AI"}
-        </button>
-        <button
-          className="btn btn-primary w-full disabled:opacity-45"
-          disabled={drafts.length === 0}
-          onClick={acceptAll}
-        >
-          <Wand2 size={16} />
-          Accept parsed tasks
-        </button>
       </div>
     </section>
   );
+}
+
+function DraftReview({
+  draft,
+  onChange,
+  onAccept,
+  onReject
+}: {
+  draft: EditableDraft;
+  onChange: (patch: Partial<EditableDraft>) => void;
+  onAccept: () => void;
+  onReject: () => void;
+}) {
+  const deadlineValue = draft.deadline ? draft.deadline.slice(0, 16) : "";
+
+  return (
+    <div className="subtle-card space-y-3 p-3 text-sm">
+      <input className="field" value={draft.title} onChange={(event) => onChange({ title: event.target.value })} />
+      <div className="grid gap-2 sm:grid-cols-[1fr_140px]">
+        <input className="field" type="datetime-local" value={deadlineValue} onChange={(event) => onChange({ deadline: event.target.value ? new Date(event.target.value).toISOString() : undefined })} />
+        <select className="field" value={draft.category} onChange={(event) => onChange({ category: event.target.value as TaskCategory })}>
+          <option value="competition">Competition</option>
+          <option value="school">School</option>
+          <option value="chore">Chore</option>
+          <option value="personal">Personal</option>
+          <option value="admin">Admin</option>
+        </select>
+      </div>
+      {!draft.deadline ? <p className="text-xs text-[var(--warning)]">No deadline found. Add one if this can become urgent.</p> : null}
+      <div className="flex gap-2">
+        <button className="btn btn-success flex-1" onClick={onAccept}>
+          <Check size={16} />
+          Accept
+        </button>
+        <button className="btn btn-soft px-3" onClick={onReject} title="Reject">
+          <Trash2 size={16} />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function withLocalId(draft: ParsedTaskDraft): EditableDraft {
+  return {
+    ...draft,
+    localId: crypto.randomUUID()
+  };
+}
+
+function stripLocalId(draft: EditableDraft): ParsedTaskDraft {
+  const { localId: _localId, ...taskDraft } = draft;
+  return taskDraft;
 }
