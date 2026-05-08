@@ -52,8 +52,8 @@ export function NotificationSettings() {
   }
 
   return (
-    <section className="rounded-md border border-[var(--line)] bg-white">
-      <header className="flex items-center gap-2 border-b border-[var(--line)] px-4 py-3">
+    <section className="panel">
+      <header className="panel-header">
         <Bell size={18} />
         <h2 className="font-semibold">Notification Channels</h2>
       </header>
@@ -62,23 +62,23 @@ export function NotificationSettings() {
           Discord and Slack use webhook URLs. Email uses Resend when server env vars are configured. WhatsApp is saved for the provider integration pass.
         </p>
         <form className="grid gap-3 md:grid-cols-[160px_1fr_1fr_auto]" onSubmit={submit}>
-          <select className="rounded border border-[var(--line)] px-3 py-2" value={channelType} onChange={(event) => setChannelType(event.target.value as NotificationChannelType)}>
+          <select className="field" value={channelType} onChange={(event) => setChannelType(event.target.value as NotificationChannelType)}>
             <option value="discord">Discord</option>
             <option value="slack">Slack</option>
             <option value="email">Email</option>
             <option value="whatsapp">WhatsApp</option>
           </select>
-          <input className="rounded border border-[var(--line)] px-3 py-2" placeholder="Label" value={label} onChange={(event) => setLabel(event.target.value)} />
-          <input className="rounded border border-[var(--line)] px-3 py-2" placeholder={placeholderFor(channelType)} value={target} onChange={(event) => setTarget(event.target.value)} />
-          <button className="rounded bg-ink px-4 py-2 font-semibold text-white">Add</button>
+          <input className="field" placeholder="Label" value={label} onChange={(event) => setLabel(event.target.value)} />
+          <input className="field" placeholder={placeholderFor(channelType)} value={target} onChange={(event) => setTarget(event.target.value)} />
+          <button className="btn btn-dark">Add</button>
         </form>
 
         {message ? <p className="text-sm text-[var(--muted)]">{message}</p> : null}
 
         <div className="space-y-2">
-          {channels.length === 0 ? <div className="rounded border border-dashed border-[var(--line)] p-5 text-center text-[var(--muted)]">No notification channels yet.</div> : null}
+          {channels.length === 0 ? <div className="rounded-[18px] border border-dashed border-[var(--line)] bg-white/60 p-8 text-center text-[var(--muted)]">No notification channels yet.</div> : null}
           {channels.map((channel) => (
-            <div key={channel.id} className="flex flex-col gap-3 rounded-md border border-[var(--line)] p-3 md:flex-row md:items-center md:justify-between">
+            <div key={channel.id} className="subtle-card flex flex-col gap-3 p-3 md:flex-row md:items-center md:justify-between">
               <div>
                 <p className="font-semibold">{channel.label}</p>
                 <p className="mt-1 text-sm text-[var(--muted)]">
@@ -86,10 +86,10 @@ export function NotificationSettings() {
                 </p>
               </div>
               <div className="flex gap-2">
-                <button className="rounded border border-[var(--line)] px-3 py-2" title="Send test" onClick={() => test(channel)}>
+                <button className="btn btn-soft px-3" title="Send test" onClick={() => test(channel)}>
                   <Send size={16} />
                 </button>
-                <button className="rounded border border-[var(--line)] px-3 py-2" title="Delete" onClick={() => remove(channel.id)}>
+                <button className="btn btn-soft px-3" title="Delete" onClick={() => remove(channel.id)}>
                   <Trash2 size={16} />
                 </button>
               </div>

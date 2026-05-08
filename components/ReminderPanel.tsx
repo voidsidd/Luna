@@ -72,8 +72,8 @@ export function ReminderPanel({ tasks }: { tasks: Task[] }) {
   return (
     <section className="space-y-5">
       {dueReminders.length > 0 ? (
-        <div className="rounded-md border border-clay bg-white p-4">
-          <h2 className="mb-3 flex items-center gap-2 font-semibold text-clay">
+        <div className="rounded-[18px] border border-orange-200 bg-orange-50/80 p-4 shadow-sm">
+          <h2 className="mb-3 flex items-center gap-2 font-semibold text-[var(--warning)]">
             <BellRing size={18} />
             Due reminders
           </h2>
@@ -82,22 +82,22 @@ export function ReminderPanel({ tasks }: { tasks: Task[] }) {
               <ReminderRow key={reminder.id} reminder={reminder} task={tasks.find((task) => task.id === reminder.taskId)} onDismiss={dismiss} />
             ))}
           </div>
-          <button className="mt-3 flex items-center justify-center gap-2 rounded bg-clay px-4 py-2 text-sm font-semibold text-white" onClick={dispatchDue}>
+          <button className="btn btn-warning mt-3" onClick={dispatchDue}>
             <Send size={16} />
             Send due now
           </button>
         </div>
       ) : null}
 
-      <div className="rounded-md border border-[var(--line)] bg-white">
-        <header className="flex items-center gap-2 border-b border-[var(--line)] px-4 py-3">
+      <div className="panel">
+        <header className="panel-header">
           <Clock size={18} />
           <h2 className="font-semibold">Reminders</h2>
         </header>
         <div className="space-y-4 p-4">
-          {message ? <p className="rounded border border-[var(--line)] bg-field p-3 text-sm text-[var(--muted)]">{message}</p> : null}
+          {message ? <p className="subtle-card p-3 text-sm text-[var(--muted)]">{message}</p> : null}
           <form className="grid gap-3 md:grid-cols-[1fr_210px_150px_auto]" onSubmit={submit}>
-            <select className="rounded border border-[var(--line)] px-3 py-2" value={taskId} onChange={(event) => setTaskId(event.target.value)}>
+            <select className="field" value={taskId} onChange={(event) => setTaskId(event.target.value)}>
               <option value="">Choose task</option>
               {activeTasks.map((task) => (
                 <option key={task.id} value={task.id}>
@@ -105,18 +105,18 @@ export function ReminderPanel({ tasks }: { tasks: Task[] }) {
                 </option>
               ))}
             </select>
-            <input className="rounded border border-[var(--line)] px-3 py-2" type="datetime-local" value={remindAt} onChange={(event) => setRemindAt(event.target.value)} />
-            <select className="rounded border border-[var(--line)] px-3 py-2" value={reminderType} onChange={(event) => setReminderType(event.target.value as ReminderType)}>
+            <input className="field" type="datetime-local" value={remindAt} onChange={(event) => setRemindAt(event.target.value)} />
+            <select className="field" value={reminderType} onChange={(event) => setReminderType(event.target.value as ReminderType)}>
               <option value="custom">Custom</option>
               <option value="start">Start</option>
               <option value="deadline">Deadline</option>
               <option value="followup">Follow-up</option>
             </select>
-            <button className="rounded bg-ink px-4 py-2 font-semibold text-white">Add</button>
+            <button className="btn btn-dark">Add</button>
           </form>
 
           <div className="space-y-2">
-            {upcoming.length === 0 ? <div className="rounded border border-dashed border-[var(--line)] p-5 text-center text-[var(--muted)]">No upcoming reminders.</div> : null}
+            {upcoming.length === 0 ? <div className="rounded-[18px] border border-dashed border-[var(--line)] bg-white/60 p-8 text-center text-[var(--muted)]">No upcoming reminders.</div> : null}
             {upcoming.map((reminder) => (
               <ReminderRow key={reminder.id} reminder={reminder} task={tasks.find((task) => task.id === reminder.taskId)} onDismiss={dismiss} />
             ))}
@@ -129,14 +129,14 @@ export function ReminderPanel({ tasks }: { tasks: Task[] }) {
 
 function ReminderRow({ reminder, task, onDismiss }: { reminder: Reminder; task?: Task; onDismiss: (reminder: Reminder) => void }) {
   return (
-    <div className="flex items-center justify-between gap-3 rounded border border-[var(--line)] p-3">
+    <div className="subtle-card flex items-center justify-between gap-3 p-3">
       <div>
         <p className="font-semibold">{task?.title ?? "Deleted task"}</p>
         <p className="mt-1 text-sm text-[var(--muted)]">
           {new Date(reminder.remindAt).toLocaleString([], { dateStyle: "medium", timeStyle: "short" })} - {reminder.reminderType}
         </p>
       </div>
-      <button className="rounded border border-[var(--line)] px-3 py-2" title="Dismiss" onClick={() => onDismiss(reminder)}>
+      <button className="btn btn-soft px-3" title="Dismiss" onClick={() => onDismiss(reminder)}>
         <X size={16} />
       </button>
     </div>

@@ -4,10 +4,18 @@
 
 :root {
   color-scheme: light;
-  --background: #fbfaf6;
-  --foreground: #151816;
-  --muted: #686f67;
-  --line: #ded8cc;
+  --background: #f5f6f8;
+  --foreground: #17181c;
+  --muted: #717782;
+  --line: #e4e7ec;
+  --panel: rgba(255, 255, 255, 0.84);
+  --panel-solid: #ffffff;
+  --field: #f8f9fb;
+  --accent: #0a84ff;
+  --accent-strong: #0068d9;
+  --success: #248a3d;
+  --warning: #c2410c;
+  --shadow: 0 18px 50px rgba(18, 24, 38, 0.08);
 }
 
 * {
@@ -21,9 +29,13 @@ html {
 body {
   min-height: 100%;
   margin: 0;
-  background: var(--background);
+  background:
+    radial-gradient(circle at 15% -10%, rgba(10, 132, 255, 0.16), transparent 30%),
+    radial-gradient(circle at 90% 0%, rgba(36, 138, 61, 0.1), transparent 24%),
+    var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, Helvetica, sans-serif;
+  letter-spacing: 0;
 }
 
 button,
@@ -33,10 +45,149 @@ textarea {
   font: inherit;
 }
 
+button,
+select {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+input,
+select,
+textarea {
+  background: var(--field);
+  border: 1px solid var(--line);
+  color: var(--foreground);
+  transition: border-color 150ms ease, box-shadow 150ms ease, background 150ms ease;
+}
+
+input:hover,
+select:hover,
+textarea:hover {
+  border-color: #cbd2dc;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  background: #fff;
+  border-color: rgba(10, 132, 255, 0.65);
+  box-shadow: 0 0 0 4px rgba(10, 132, 255, 0.12);
+}
+
 button:focus-visible,
 input:focus-visible,
 select:focus-visible,
 textarea:focus-visible {
-  outline: 2px solid #4e6678;
+  outline: 2px solid var(--accent);
   outline-offset: 2px;
+}
+
+.app-shell {
+  min-height: 100vh;
+}
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  border-bottom: 1px solid rgba(228, 231, 236, 0.78);
+  background: rgba(245, 246, 248, 0.78);
+  backdrop-filter: blur(22px);
+}
+
+.panel {
+  border: 1px solid rgba(228, 231, 236, 0.9);
+  background: var(--panel);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(18px);
+  border-radius: 18px;
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-bottom: 1px solid rgba(228, 231, 236, 0.8);
+  padding: 0.9rem 1rem;
+}
+
+.field {
+  width: 100%;
+  border-radius: 12px;
+  padding: 0.72rem 0.85rem;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  min-height: 2.35rem;
+  border-radius: 999px;
+  padding: 0.55rem 0.9rem;
+  font-size: 0.875rem;
+  font-weight: 650;
+  transition: transform 150ms ease, box-shadow 150ms ease, background 150ms ease, border-color 150ms ease;
+}
+
+.btn:hover {
+  transform: translateY(-1px);
+}
+
+.btn-primary {
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: #fff;
+  box-shadow: 0 10px 22px rgba(10, 132, 255, 0.24);
+}
+
+.btn-primary:hover {
+  background: var(--accent-strong);
+}
+
+.btn-dark {
+  border: 1px solid #17181c;
+  background: #17181c;
+  color: #fff;
+  box-shadow: 0 10px 22px rgba(17, 24, 39, 0.18);
+}
+
+.btn-soft {
+  border: 1px solid rgba(228, 231, 236, 0.95);
+  background: rgba(255, 255, 255, 0.82);
+  color: var(--foreground);
+}
+
+.btn-success {
+  border: 1px solid var(--success);
+  background: var(--success);
+  color: #fff;
+}
+
+.btn-warning {
+  border: 1px solid var(--warning);
+  background: var(--warning);
+  color: #fff;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border-radius: 999px;
+  border: 1px solid rgba(228, 231, 236, 0.9);
+  background: rgba(255, 255, 255, 0.78);
+  padding: 0.28rem 0.58rem;
+  font-size: 0.75rem;
+  font-weight: 650;
+  color: #4b5563;
+}
+
+.subtle-card {
+  border: 1px solid rgba(228, 231, 236, 0.9);
+  background: rgba(255, 255, 255, 0.72);
+  border-radius: 14px;
 }

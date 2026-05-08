@@ -60,8 +60,8 @@ export function AuthPanel({ onSessionChange }: { onSessionChange: () => void }) 
 
   if (session.status === "local") {
     return (
-      <section className="rounded-md border border-[var(--line)] bg-white">
-        <header className="flex items-center gap-2 border-b border-[var(--line)] px-4 py-3">
+      <section className="panel">
+        <header className="panel-header">
           <UserRound size={18} />
           <h2 className="font-semibold">Account</h2>
         </header>
@@ -72,14 +72,14 @@ export function AuthPanel({ onSessionChange }: { onSessionChange: () => void }) 
 
   if (session.status === "signed_in") {
     return (
-      <section className="rounded-md border border-[var(--line)] bg-white">
-        <header className="flex items-center gap-2 border-b border-[var(--line)] px-4 py-3">
+      <section className="panel">
+        <header className="panel-header">
           <UserRound size={18} />
           <h2 className="font-semibold">Account</h2>
         </header>
         <div className="space-y-3 p-4">
           <p className="text-sm text-[var(--muted)]">Signed in as {session.email}</p>
-          <button className="flex w-full items-center justify-center gap-2 rounded border border-[var(--line)] px-4 py-2 font-semibold" onClick={signOut}>
+          <button className="btn btn-soft w-full" onClick={signOut}>
             <LogOut size={16} />
             Sign out
           </button>
@@ -90,21 +90,21 @@ export function AuthPanel({ onSessionChange }: { onSessionChange: () => void }) 
   }
 
   return (
-    <section className="rounded-md border border-[var(--line)] bg-white">
-      <header className="flex items-center gap-2 border-b border-[var(--line)] px-4 py-3">
+    <section className="panel">
+      <header className="panel-header">
         <UserRound size={18} />
         <h2 className="font-semibold">Account</h2>
       </header>
       <form className="space-y-3 p-4" onSubmit={submit}>
-        <input className="w-full rounded border border-[var(--line)] px-3 py-2" type="email" placeholder="Email" value={email} onChange={(event) => setEmail(event.target.value)} />
+        <input className="field" type="email" placeholder="Email" value={email} onChange={(event) => setEmail(event.target.value)} />
         <input
-          className="w-full rounded border border-[var(--line)] px-3 py-2"
+          className="field"
           type="password"
           placeholder="Password"
           value={password}
           onChange={(event) => setPassword(event.target.value)}
         />
-        <button className="flex w-full items-center justify-center gap-2 rounded bg-ink px-4 py-2 font-semibold text-white">
+        <button className="btn btn-dark w-full">
           <LogIn size={16} />
           Sign in or create account
         </button>

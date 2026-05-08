@@ -83,21 +83,21 @@ export default function Home() {
   }
 
   return (
-    <main className="min-h-screen">
-      <section className="border-b border-[var(--line)] bg-white">
-        <div className="mx-auto flex max-w-6xl flex-col gap-6 px-5 py-6 md:flex-row md:items-end md:justify-between">
+    <main className="app-shell">
+      <section className="topbar">
+        <div className="mx-auto flex max-w-7xl flex-col gap-5 px-4 py-5 md:flex-row md:items-end md:justify-between lg:px-6">
           <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-moss">Priority Manager</p>
-            <h1 className="mt-2 text-3xl font-semibold text-ink md:text-4xl">Decide what matters next.</h1>
-            <p className="mt-3 max-w-2xl text-base leading-7 text-[var(--muted)]">
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--accent)]">Priority Manager</p>
+            <h1 className="mt-1 text-3xl font-semibold text-[var(--foreground)] md:text-4xl">Decide what matters next.</h1>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--muted)] md:text-base">
               A task and deadline manager with a priority engine underneath. AI can help later, but the core works on its own.
             </p>
           </div>
-          <div className="flex rounded-md border border-[var(--line)] bg-field p-1">
+          <div className="grid grid-cols-3 gap-1 rounded-full border border-[var(--line)] bg-white/70 p-1 shadow-sm sm:flex">
             {tabs.map((item) => (
               <button
                 key={item}
-                className={`rounded px-4 py-2 text-sm font-semibold ${tab === item ? "bg-ink text-white" : "text-ink hover:bg-white"}`}
+                className={`rounded-full px-4 py-2 text-sm font-semibold transition ${tab === item ? "bg-[var(--foreground)] text-white shadow-sm" : "text-[var(--muted)] hover:bg-white hover:text-[var(--foreground)]"}`}
                 onClick={() => setTab(item)}
               >
                 {item}
@@ -107,8 +107,8 @@ export default function Home() {
         </div>
       </section>
 
-      <div className="mx-auto grid max-w-6xl gap-5 px-5 py-5 lg:grid-cols-[360px_1fr]">
-        <aside className="space-y-5">
+      <div className="mx-auto grid max-w-7xl gap-5 px-4 py-5 lg:grid-cols-[360px_1fr] lg:px-6">
+        <aside className="space-y-4 lg:sticky lg:top-36 lg:self-start">
           <AuthPanel onSessionChange={refreshData} />
           <TaskEditor onSave={upsertTask} />
           <BrainDump onAccept={upsertTask} />
@@ -116,7 +116,9 @@ export default function Home() {
 
         <section className="min-h-[620px]">
           {!isLoaded ? (
-            <Panel title="Loading" icon={<TimerReset size={18} />}>Loading your tasks.</Panel>
+            <Panel title="Loading" icon={<TimerReset size={18} />}>
+              Loading your tasks.
+            </Panel>
           ) : tab === "Now" ? (
             <NowView
               recommendation={recommendation}
@@ -159,7 +161,9 @@ function NowView({
     return (
       <Panel title="Now" icon={<Sparkles size={18} />}>
         <div className="flex min-h-[360px] flex-col items-center justify-center text-center">
-          <Check className="mb-4 text-moss" size={36} />
+          <div className="mb-4 rounded-full bg-emerald-50 p-3 text-[var(--success)]">
+            <Check size={36} />
+          </div>
           <h2 className="text-2xl font-semibold">Nothing is demanding attention.</h2>
           <p className="mt-2 max-w-md text-[var(--muted)]">Add tasks manually or drop a messy brain dump into the inbox.</p>
         </div>
@@ -170,31 +174,31 @@ function NowView({
   return (
     <div className="space-y-5">
       <Panel title="Recommended Now" icon={<Sparkles size={18} />}>
-        <div className="rounded-md border border-[var(--line)] bg-field p-5">
+        <div className="rounded-[18px] border border-[var(--line)] bg-white/72 p-5 shadow-sm">
           <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
             <div>
-              <p className="text-sm font-semibold text-moss">Do this next</p>
+              <p className="text-sm font-semibold text-[var(--accent)]">Do this next</p>
               <h2 className="mt-2 text-2xl font-semibold">{recommendation.task.title}</h2>
               <p className="mt-3 max-w-2xl leading-7 text-[var(--muted)]">{recommendation.reason}</p>
               {recommendation.task.nextAction ? <p className="mt-3 font-medium">Start with: {recommendation.task.nextAction}</p> : null}
             </div>
             <div className="flex shrink-0 gap-2">
-              <button className="rounded bg-moss px-4 py-2 text-sm font-semibold text-white" onClick={() => onDone(recommendation.task)}>
+              <button className="btn btn-success" onClick={() => onDone(recommendation.task)}>
                 Done
               </button>
-              <button className="rounded border border-[var(--line)] bg-white px-4 py-2 text-sm font-semibold" onClick={() => onSnooze(recommendation.task)}>
+              <button className="btn btn-soft" onClick={() => onSnooze(recommendation.task)}>
                 Snooze
               </button>
             </div>
           </div>
           <div className="mt-4 flex flex-wrap gap-2 border-t border-[var(--line)] pt-4">
-            <button className="rounded border border-[var(--line)] bg-white px-3 py-2 text-sm font-semibold" onClick={() => onFeedback(recommendation.task, "too_tired")}>
+            <button className="btn btn-soft" onClick={() => onFeedback(recommendation.task, "too_tired")}>
               Too tired
             </button>
-            <button className="rounded border border-[var(--line)] bg-white px-3 py-2 text-sm font-semibold" onClick={() => onFeedback(recommendation.task, "too_hard")}>
+            <button className="btn btn-soft" onClick={() => onFeedback(recommendation.task, "too_hard")}>
               Too hard
             </button>
-            <button className="rounded border border-[var(--line)] bg-white px-3 py-2 text-sm font-semibold" onClick={() => onFeedback(recommendation.task, "not_now")}>
+            <button className="btn btn-soft" onClick={() => onFeedback(recommendation.task, "not_now")}>
               Not now
             </button>
           </div>
@@ -204,13 +208,13 @@ function NowView({
       <Panel title="Backups" icon={<ListChecks size={18} />}>
         <div className="grid gap-3">
           {rankedTasks.slice(1, 5).map(({ task, score, reason }) => (
-            <div key={task.id} className="rounded-md border border-[var(--line)] bg-white p-4">
+            <div key={task.id} className="subtle-card p-4">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <h3 className="font-semibold">{task.title}</h3>
                   <p className="mt-1 text-sm text-[var(--muted)]">{reason}</p>
                 </div>
-                <span className="rounded bg-field px-2 py-1 text-xs font-semibold">Score {score}</span>
+                <span className="chip">Score {score}</span>
               </div>
             </div>
           ))}
@@ -242,7 +246,7 @@ function DeadlineView({
         {groups.map((group) => (
           <div key={group.label}>
             <h2 className="mb-2 flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.14em] text-[var(--muted)]">
-              {group.label === "At Risk" ? <AlertTriangle size={16} className="text-clay" /> : <Clock size={16} />}
+              {group.label === "At Risk" ? <AlertTriangle size={16} className="text-[var(--warning)]" /> : <Clock size={16} />}
               {group.label}
             </h2>
             <TaskList compact tasks={group.tasks} onDone={onDone} onSnooze={onSnooze} onFeedback={onFeedback} />
@@ -255,8 +259,8 @@ function DeadlineView({
 
 function Panel({ title, icon, children }: { title: string; icon: React.ReactNode; children: React.ReactNode }) {
   return (
-    <section className="rounded-md border border-[var(--line)] bg-white">
-      <header className="flex items-center gap-2 border-b border-[var(--line)] px-4 py-3">
+    <section className="panel">
+      <header className="panel-header">
         {icon}
         <h2 className="font-semibold">{title}</h2>
       </header>

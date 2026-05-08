@@ -24,7 +24,7 @@ export function TaskList({
   const sorted = [...tasks].sort((a, b) => scoreTask(b) - scoreTask(a));
 
   if (sorted.length === 0) {
-    return <div className="rounded-md border border-dashed border-[var(--line)] p-6 text-center text-[var(--muted)]">No tasks here.</div>;
+    return <div className="rounded-[18px] border border-dashed border-[var(--line)] bg-white/60 p-8 text-center text-[var(--muted)]">No tasks here.</div>;
   }
 
   return (
@@ -33,13 +33,13 @@ export function TaskList({
         editingId === task.id && onSave ? (
           <InlineEdit key={task.id} task={task} onCancel={() => setEditingId(null)} onSave={(next) => { onSave(next); setEditingId(null); }} />
         ) : (
-          <article key={task.id} className={`rounded-md border border-[var(--line)] bg-white ${compact ? "p-3" : "p-4"}`}>
+          <article key={task.id} className={`subtle-card transition hover:-translate-y-0.5 hover:shadow-md ${compact ? "p-3" : "p-4"}`}>
             <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
               <div>
                 <div className="flex flex-wrap items-center gap-2">
                   <h3 className="font-semibold">{task.title}</h3>
-                  <span className="rounded bg-field px-2 py-1 text-xs font-semibold">{task.category}</span>
-                  <span className="rounded bg-field px-2 py-1 text-xs font-semibold">Score {scoreTask(task)}</span>
+                  <span className="chip">{task.category}</span>
+                  <span className="chip">Score {scoreTask(task)}</span>
                 </div>
                 <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-[var(--muted)]">
                   <span className="flex items-center gap-1">
@@ -53,13 +53,13 @@ export function TaskList({
                 {!compact && task.nextAction ? <p className="mt-2 text-sm text-[var(--muted)]">Start: {task.nextAction}</p> : null}
                 {!compact && onFeedback ? (
                   <div className="mt-3 flex flex-wrap gap-2">
-                    <button className="rounded border border-[var(--line)] px-2 py-1 text-xs font-semibold" onClick={() => onFeedback(task, "too_tired")}>
+                    <button className="btn btn-soft min-h-0 px-3 py-1 text-xs" onClick={() => onFeedback(task, "too_tired")}>
                       Too tired
                     </button>
-                    <button className="rounded border border-[var(--line)] px-2 py-1 text-xs font-semibold" onClick={() => onFeedback(task, "too_hard")}>
+                    <button className="btn btn-soft min-h-0 px-3 py-1 text-xs" onClick={() => onFeedback(task, "too_hard")}>
                       Too hard
                     </button>
-                    <button className="rounded border border-[var(--line)] px-2 py-1 text-xs font-semibold" onClick={() => onFeedback(task, "not_now")}>
+                    <button className="btn btn-soft min-h-0 px-3 py-1 text-xs" onClick={() => onFeedback(task, "not_now")}>
                       Not now
                     </button>
                   </div>
@@ -67,14 +67,14 @@ export function TaskList({
               </div>
               <div className="flex shrink-0 gap-2">
                 {onSave ? (
-                  <button className="rounded border border-[var(--line)] px-3 py-2" title="Edit task" onClick={() => setEditingId(task.id)}>
+                  <button className="btn btn-soft px-3" title="Edit task" onClick={() => setEditingId(task.id)}>
                     <Pencil size={16} />
                   </button>
                 ) : null}
-                <button className="rounded border border-[var(--line)] px-3 py-2" title="Snooze task" onClick={() => onSnooze(task)}>
+                <button className="btn btn-soft px-3" title="Snooze task" onClick={() => onSnooze(task)}>
                   <TimerReset size={16} />
                 </button>
-                <button className="rounded bg-moss px-3 py-2 text-white" title="Mark done" onClick={() => onDone(task)}>
+                <button className="btn btn-success px-3" title="Mark done" onClick={() => onDone(task)}>
                   <Check size={16} />
                 </button>
               </div>
@@ -91,17 +91,17 @@ function InlineEdit({ task, onCancel, onSave }: { task: Task; onCancel: () => vo
   const [deadline, setDeadline] = useState(task.deadline ? task.deadline.slice(0, 16) : "");
 
   return (
-    <div className="rounded-md border border-[var(--line)] bg-field p-4">
+    <div className="subtle-card p-4">
       <div className="grid gap-3 md:grid-cols-[1fr_220px]">
-        <input className="rounded border border-[var(--line)] px-3 py-2" value={title} onChange={(event) => setTitle(event.target.value)} />
-        <input className="rounded border border-[var(--line)] px-3 py-2" type="datetime-local" value={deadline} onChange={(event) => setDeadline(event.target.value)} />
+        <input className="field" value={title} onChange={(event) => setTitle(event.target.value)} />
+        <input className="field" type="datetime-local" value={deadline} onChange={(event) => setDeadline(event.target.value)} />
       </div>
       <div className="mt-3 flex justify-end gap-2">
-        <button className="rounded border border-[var(--line)] bg-white px-3 py-2 text-sm font-semibold" onClick={onCancel}>
+        <button className="btn btn-soft" onClick={onCancel}>
           Cancel
         </button>
         <button
-          className="rounded bg-ink px-3 py-2 text-sm font-semibold text-white"
+          className="btn btn-dark"
           onClick={() =>
             onSave({
               ...task,

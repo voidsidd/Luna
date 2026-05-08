@@ -43,14 +43,14 @@ export function BrainDump({ onAccept }: { onAccept: (task: Task) => void }) {
   }
 
   return (
-    <section className="rounded-md border border-[var(--line)] bg-white">
-      <header className="flex items-center gap-2 border-b border-[var(--line)] px-4 py-3">
+    <section className="panel">
+      <header className="panel-header">
         <Inbox size={18} />
         <h2 className="font-semibold">Brain Dump</h2>
       </header>
       <div className="space-y-3 p-4">
         <textarea
-          className="min-h-32 w-full resize-y rounded border border-[var(--line)] px-3 py-2"
+          className="field min-h-32 resize-y"
           placeholder="Paste the messy version: physics due tomorrow, laundry, register for hackathon by Sunday..."
           value={input}
           onChange={(event) => setInput(event.target.value)}
@@ -58,7 +58,7 @@ export function BrainDump({ onAccept }: { onAccept: (task: Task) => void }) {
         {drafts.length > 0 ? (
           <div className="space-y-2">
             {drafts.map((draft, index) => (
-              <div key={`${draft.title}-${index}`} className="rounded border border-[var(--line)] bg-field p-3 text-sm">
+              <div key={`${draft.title}-${index}`} className="subtle-card p-3 text-sm">
                 <p className="font-semibold">{draft.title}</p>
                 <p className="mt-1 text-[var(--muted)]">
                   {draft.category} - {draft.deadline ? new Date(draft.deadline).toLocaleDateString() : "no deadline"} - {draft.energyRequired} energy
@@ -69,7 +69,7 @@ export function BrainDump({ onAccept }: { onAccept: (task: Task) => void }) {
         ) : null}
         {message ? <p className="text-sm text-[var(--muted)]">{message}</p> : null}
         <button
-          className="flex w-full items-center justify-center gap-2 rounded border border-[var(--line)] bg-white px-4 py-2 font-semibold disabled:cursor-not-allowed disabled:opacity-45"
+          className="btn btn-soft w-full disabled:opacity-45"
           disabled={drafts.length === 0 || isParsing}
           onClick={enhanceWithAi}
         >
@@ -77,7 +77,7 @@ export function BrainDump({ onAccept }: { onAccept: (task: Task) => void }) {
           {isParsing ? "Parsing..." : "Clean up with AI"}
         </button>
         <button
-          className="flex w-full items-center justify-center gap-2 rounded bg-steel px-4 py-2 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-45"
+          className="btn btn-primary w-full disabled:opacity-45"
           disabled={drafts.length === 0}
           onClick={acceptAll}
         >
