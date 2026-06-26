@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { AlertTriangle, BellRing, CalendarDays, Check, Clock, ListChecks, Sparkles, TimerReset } from "lucide-react";
 import { AuthPanel } from "@/components/AuthPanel";
 import { BrainDump } from "@/components/BrainDump";
@@ -8,35 +8,20 @@ import { NotificationSettings } from "@/components/NotificationSettings";
 import { ReminderPanel } from "@/components/ReminderPanel";
 import { TaskEditor } from "@/components/TaskEditor";
 import { TaskList } from "@/components/TaskList";
-import { loadTasks, saveTask, updateTask } from "@/lib/storage/taskStore";
-import { loadTaskEvents, recordTaskEvent } from "@/lib/storage/taskEventStore";
-import { loadReminders, saveReminder } from "@/lib/storage/reminderStore";
+import { useTasks } from "@/components/TaskProvider";
 import { explainTask, scoreTask } from "@/lib/priority/scoreTask";
 import { recommendNextTask } from "@/lib/priority/recommendNextTask";
 import { summarizePatterns } from "@/lib/priority/userPatterns";
-import type { Task, TaskEvent, TaskEventType, TaskStatus } from "@/lib/types";
+import { loadReminders, saveReminder } from "@/lib/storage/reminderStore";
+import type { Task, TaskStatus } from "@/lib/types";
 
 const tabs = ["Now", "Tasks", "Deadlines", "Reminders", "Settings"] as const;
 type Tab = (typeof tabs)[number];
 
 export default function Home() {
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [events, setEvents] = useState<TaskEvent[]>([]);
+  const { tasks, events, isLoaded, refreshData, upsertTask, setStatus, logEvent } = useTasks();
   const [tab, setTab] = useState<Tab>("Now");
-  const [isLoaded, setIsLoaded] = useState(false);
   const [isOverwhelmedMode, setIsOverwhelmedMode] = useState(false);
-
-  const refreshData = useCallback(() => {
-    Promise.all([loadTasks(), loadTaskEvents()]).then(([taskItems, eventItems]) => {
-      setTasks(taskItems);
-      setEvents(eventItems);
-      setIsLoaded(true);
-    });
-  }, []);
-
-  useEffect(() => {
-    refreshData();
-  }, [refreshData]);
 
   const activeTasks = useMemo(() => tasks.filter((task) => task.status === "active" || task.status === "snoozed"), [tasks]);
   const patterns = useMemo(() => summarizePatterns(events, tasks), [events, tasks]);
@@ -46,13 +31,9 @@ export default function Home() {
   );
   const recommendation = useMemo(() => recommendNextTask(activeTasks, patterns), [activeTasks, patterns]);
 
-  async function upsertTask(task: Task) {
-    const saved = await saveTask(task);
-    await ensureDeadlineReminder(saved);
-    setTasks((current) => {
-      const exists = current.some((item) => item.id === saved.id);
-      return exists ? current.map((item) => (item.id === saved.id ? saved : item)) : [saved, ...current];
-    });
+  async function handleUpsertTask(task: Task) {
+    await upsertTask(task);
+    await ensureDeadlineReminder(task);
   }
 
   async function ensureDeadlineReminder(task: Task) {
@@ -73,42 +54,21 @@ export default function Home() {
     });
   }
 
-  async function setStatus(task: Task, status: TaskStatus) {
-    const saved = await updateTask({ ...task, status, updatedAt: new Date().toISOString() });
-    setTasks((current) => current.map((item) => (item.id === saved.id ? saved : item)));
-    await logEvent(saved, status === "done" ? "completed" : "edited");
-  }
-
-  async function snoozeTask(task: Task) {
-    const snoozedUntil = askForSnoozeTime();
-    if (!snoozedUntil) return;
-    const saved = await updateTask({ ...task, status: "snoozed", snoozedUntil, updatedAt: new Date().toISOString() });
-    setTasks((current) => current.map((item) => (item.id === saved.id ? saved : item)));
-    await logEvent(saved, "snoozed", { snoozedUntil: saved.snoozedUntil });
-  }
-
-  async function logEvent(task: Task, eventType: TaskEventType, metadata: Record<string, unknown> = {}) {
-    const savedEvent = await recordTaskEvent(task, eventType, metadata);
-    setEvents((current) => [savedEvent, ...current]);
-  }
-
   async function markNeedsSmallerStep(task: Task, eventType: "too_tired" | "too_hard" | "not_now") {
     await logEvent(task, eventType);
     if (eventType === "too_hard") {
-      const saved = await updateTask({
+      await upsertTask({
         ...task,
         effortMinutes: Math.min(task.effortMinutes ?? 45, 25),
         nextAction: task.nextAction ?? "Split this into the smallest useful first step.",
         updatedAt: new Date().toISOString()
       });
-      setTasks((current) => current.map((item) => (item.id === saved.id ? saved : item)));
       return;
     }
 
     const minutes = eventType === "too_tired" ? 120 : 60;
     const snoozedUntil = offsetMinutes(minutes);
-    const saved = await updateTask({ ...task, status: "snoozed", snoozedUntil, updatedAt: new Date().toISOString() });
-    setTasks((current) => current.map((item) => (item.id === saved.id ? saved : item)));
+    await upsertTask({ ...task, status: "snoozed", snoozedUntil, updatedAt: new Date().toISOString() });
   }
 
   return (
@@ -139,8 +99,8 @@ export default function Home() {
       <div className="mx-auto grid max-w-7xl gap-5 px-4 py-5 lg:grid-cols-[360px_1fr] lg:px-6">
         <aside className="space-y-4 lg:sticky lg:top-36 lg:self-start">
           <AuthPanel onSessionChange={refreshData} />
-          <TaskEditor onSave={upsertTask} />
-          <BrainDump onAccept={upsertTask} />
+          <TaskEditor onSave={handleUpsertTask} />
+          <BrainDump onAccept={handleUpsertTask} />
         </aside>
 
         <section className="min-h-[620px]">
@@ -153,15 +113,15 @@ export default function Home() {
               recommendation={recommendation}
               rankedTasks={rankedTasks}
               onDone={(task) => setStatus(task, "done")}
-              onSnooze={snoozeTask}
+              onSnooze={(task) => upsertTask({ ...task, status: "snoozed", snoozedUntil: nextMorning(), updatedAt: new Date().toISOString() })}
               onFeedback={markNeedsSmallerStep}
               isOverwhelmedMode={isOverwhelmedMode}
               onToggleOverwhelmed={() => setIsOverwhelmedMode((value) => !value)}
             />
           ) : tab === "Tasks" ? (
-            <TaskList tasks={tasks.filter((task) => task.status !== "done")} onDone={(task) => setStatus(task, "done")} onSnooze={snoozeTask} onSave={upsertTask} onFeedback={markNeedsSmallerStep} />
+            <TaskList tasks={tasks.filter((task) => task.status !== "done")} onDone={(task) => setStatus(task, "done")} onSnooze={(task) => upsertTask({ ...task, status: "snoozed", snoozedUntil: nextMorning(), updatedAt: new Date().toISOString() })} onSave={upsertTask} onFeedback={markNeedsSmallerStep} />
           ) : tab === "Deadlines" ? (
-            <DeadlineView tasks={tasks} patterns={patterns} onDone={(task) => setStatus(task, "done")} onSnooze={snoozeTask} onFeedback={markNeedsSmallerStep} />
+            <DeadlineView tasks={tasks} patterns={patterns} onDone={(task) => setStatus(task, "done")} onSnooze={(task) => upsertTask({ ...task, status: "snoozed", snoozedUntil: nextMorning(), updatedAt: new Date().toISOString() })} onFeedback={markNeedsSmallerStep} />
           ) : tab === "Reminders" ? (
             <Panel title="Reminders" icon={<BellRing size={18} />}>
               <ReminderPanel tasks={tasks} />
@@ -174,6 +134,8 @@ export default function Home() {
     </main>
   );
 }
+
+// ... rest of the component implementations (NowView, DeadlineView, Panel, Helpers)
 
 function NowView({
   recommendation,
